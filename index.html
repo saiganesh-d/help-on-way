@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CVE / Release Dashboard</title>
+
+  <!-- Bootstrap & helpers -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    body { background:#f3f4f6; }
+    sup         { font-size:.65em }
+    .card-body-tab { min-height:6rem }
+  </style>
+</head>
+<body>
+<div class="container-fluid py-4">
+
+  <!-- ---------- Header ---------- -->
+  <div class="d-flex justify-content-between align-items-center bg-white shadow rounded-3 p-3 mb-4">
+    <h1 class="h4 mb-0">CVE / Release Dashboard</h1>
+
+    <select id="projectSelect" class="form-select w-auto"></select>
+  </div>
+
+  <!-- ---------- Main Grid ---------- -->
+  <div class="row g-4">
+
+    <!-- ----- Left: chart + tabs (≈30 %) ----- -->
+    <div class="col-xl-4">
+
+      <!-- Chart card -->
+      <div class="card mb-4">
+        <div class="card-body" style="height:22rem">
+          <h6 class="fw-semibold mb-3">CVEs by Severity – all branches</h6>
+          <canvas id="severityChart" height="170"></canvas>
+        </div>
+      </div>
+
+      <!-- Branch tabs -->
+      <ul id="branchTabs" class="nav nav-tabs overflow-auto"></ul>
+      <div id="branchTabContent" class="tab-content border rounded-bottom bg-white p-3 card-body-tab"></div>
+    </div>
+
+    <!-- ----- Right: summary table (≈70 %) ----- -->
+    <div class="col-xl-8">
+      <div class="card h-100">
+        <div class="card-body p-0 overflow-auto">
+          <table class="table table-sm mb-0">
+            <thead class="table-light position-sticky top-0">
+              <tr>
+                <th>Project / Branch</th>
+                <th>Latest Release</th>
+                <th>Date</th>
+                <th>Runs</th>
+                <th>CVEs</th>
+                <th>CVE</th>
+                <th>Tickets</th>
+                <th>SBOM</th>
+                <th>Report</th>
+              </tr>
+            </thead>
+            <tbody id="summaryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- JS libs ---------- -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// ---------- Demo data (replace with AJAX results) ----------
+const demoProjects = [
+  {
+    id: "p1",
+    name: "ADAS Platform",
+    branches: [
+      {
+        id: "b1",
+        name: "Europe",
+        components: [
+          { id: "c1", name: "ADAS_ECU" },
+          { id: "c2", name: "Camera_ECU" },
+         
+        ],
+        latestRelease: {
+          version: "v23.4",
+          date: "2025‑03‑12",
+          cveStats: { Critical: 3, High: 2567, Medium: 1256, Low: 8 },
+        },
+        ticketStats: { jira: 8, starc: 2 },
+      },
+      {
+        id: "b2",
+        name: "China",
+        components: [{ id: "c3", name: "ADAS_ECU" }],
+        latestRelease: {
+          version: "v23.3",
+          date: "2025‑02‑28",
+          cveStats: { Critical: 1, High: 4, Medium: 9, Low: 5 },
+        },
+        ticketStats: { jira: 3, starc: 1 },
+      },
+      {
+        id: "b3",
+        name: "Esurope",
+        components: [
+          { id: "c1", name: "ADAS_ECU" },
+          { id: "c2", name: "Camera_ECU" },
+         
+        ],
+        latestRelease: {
+          version: "v23.4",
+          date: "2025‑03‑12",
+          cveStats: { Critical: 3, High: 2567, Medium: 1256, Low: 8 },
+        },
+        ticketStats: { jira: 8, starc: 2 },
+      },
+      {
+        id: "b4",
+        name: "Cshina",
+        components: [{ id: "c3", name: "ADAS_ECU" }],
+        latestRelease: {
+          version: "v23.3",
+          date: "2025‑02‑28",
+          cveStats: { Critical: 1, High: 4, Medium: 9, Low: 5 },
+        },
+        ticketStats: { jira: 3, starc: 1 },
+      },
+      {
+        id: "b6",
+        name: "Europe",
+        components: [
+          { id: "c1", name: "ADAS_ECU" },
+          { id: "c2", name: "Camera_ECU" },
+         
+        ],
+        latestRelease: {
+          version: "v23.4",
+          date: "2025‑03‑12",
+          cveStats: { Critical: 3, High: 2567, Medium: 1256, Low: 8 },
+        },
+        ticketStats: { jira: 8, starc: 2 },
+      },
+      {
+        id: "b5",
+        name: "China",
+        components: [{ id: "c3", name: "ADAS_ECU" }],
+        latestRelease: {
+          version: "v23.3",
+          date: "2025‑02‑28",
+          cveStats: { Critical: 1, High: 4, Medium: 9, Low: 5 },
+        },
+        ticketStats: { jira: 3, starc: 1 },
+      },
+      {
+        id: "b1",
+        name: "Europe",
+        components: [
+          { id: "c1", name: "ADAS_ECU" },
+          { id: "c2", name: "Camera_ECU" },
+         
+        ],
+        latestRelease: {
+          version: "v23.4",
+          date: "2025‑03‑12",
+          cveStats: { Critical: 3, High: 2567, Medium: 1256, Low: 8 },
+        },
+        ticketStats: { jira: 8, starc: 2 },
+      },
+      {
+        id: "b2",
+        name: "China",
+        components: [{ id: "c3", name: "ADAS_ECU" }],
+        latestRelease: {
+          version: "v23.3",
+          date: "2025‑02‑28",
+          cveStats: { Critical: 1, High: 4, Medium: 9, Low: 5 },
+        },
+        ticketStats: { jira: 3, starc: 1 },
+      },
+    ],
+  },
+];
+
+/* -------- helpers -------- */
+const countCVEs = (stats) => Object.values(stats).reduce((s, n) => s + n, 0);
+
+/* -------- Chart instance -------- */
+let chart;
+
+/* -------- Main render -------- */
+function renderDashboard(projectId) {
+  const project = demoProjects.find((p) => p.id === projectId);
+  const firstBranchId = project.branches[0].id;
+
+  // ------- chart -------
+  const chartData = project.branches.map((b) => ({
+    branch: b.name,
+    ...b.latestRelease.cveStats,
+  }));
+  const labels = chartData.map((d) => d.branch);
+  const severities = ["Critical", "High", "Medium", "Low"];
+  const colors     = ["#000", "#f00", "#ffa500", "#008000"];
+
+  const datasets = severities.map((sev, i) => ({
+    label: sev,
+    data : chartData.map((d) => d[sev]),
+    backgroundColor: colors[i],
+    stack: "sev",
+  }));
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById("severityChart"), {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { stacked:true }, y: { stacked:true, ticks:{precision:0} } },
+    },
+  });
+
+  // ------- branch tabs -------
+  const $tabs = $("#branchTabs").empty();
+  const $tabContent = $("#branchTabContent").empty();
+
+  project.branches.forEach((b, idx) => {
+    // tab button
+    $tabs.append(`
+      <li class="nav-item" role="presentation">
+        <button class="nav-link ${idx===0?'active':''}" id="tab-${b.id}"
+                data-bs-toggle="tab" data-bs-target="#tabpane-${b.id}"
+                type="button" role="tab">${b.name}</button>
+      </li>
+    `);
+
+    // content
+    $tabContent.append(`
+      <div class="tab-pane fade ${idx===0?'show active':''}" id="tabpane-${b.id}" role="tabpanel">
+        <p><strong>Latest Release:</strong> ${b.latestRelease.version} (${b.latestRelease.date})</p>
+        <p><strong>Total CVEs:</strong> ${countCVEs(b.latestRelease.cveStats)}</p>
+        <p><strong>Components:</strong> ${b.components.map((c)=>c.name).join(", ")}</p>
+      </div>
+    `);
+  });
+
+  // ------- summary table -------
+  const $tbody = $("#summaryBody").empty();
+  $tbody.append(`
+    <tr class="table-primary fw-semibold">
+      <td colspan="8">${project.name}</td>
+    </tr>
+  `);
+
+  project.branches.forEach((b) => {
+    b.components.forEach((comp) => {
+      $tbody.append(`
+        <tr>
+          <td class="ps-4">${b.name} <sup>${comp.name}</sup></td>
+          <td>${b.latestRelease.version}</td>
+          <td>${b.latestRelease.date}</td>
+          <td><button class="btn btn-outline-secondary btn-sm">Runs</button></td>
+          <td>${countCVEs(b.latestRelease.cveStats)}</td>
+              <td><button class="btn btn-outline-secondary btn-sm ms-1">CVEs</button></td>
+          <td>${b.ticketStats.jira + b.ticketStats.starc}
+              <button class="btn btn-outline-secondary btn-sm ms-1">Tickets</button></td>
+          <td><button class="btn btn-outline-secondary btn-sm">SBOM</button></td>
+          <td><button class="btn btn-outline-secondary btn-sm">Report</button></td>
+        </tr>
+      `);
+    });
+  });
+}
+
+/* -------- Init -------- */
+$(function () {
+  // project dropdown
+  demoProjects.forEach((p) =>
+    $("#projectSelect").append(`<option value="${p.id}">${p.name}</option>`)
+  );
+
+  // initial render
+  renderDashboard(demoProjects[0].id);
+
+  // change handler
+  $("#projectSelect").on("change", function () {
+    renderDashboard(this.value);
+  });
+});
+</script>
+</body>
+</html>
